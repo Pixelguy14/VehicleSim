@@ -11,6 +11,8 @@ configure_file(
 
 add_executable(vehicle_sim
     main.cpp
+    core/FixedStepper.cpp
+    core/FrameStats.cpp
     core/Window.cpp
     graphics/Renderer.cpp
     graphics/Shader.cpp

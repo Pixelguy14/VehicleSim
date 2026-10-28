@@ -40,6 +40,10 @@ public:
     [[nodiscard]] bool ShouldClose() const;
     void RequestClose();
 
+    /// Titulo de la ventana. Se usa para mostrar FPS y coste de fisica en vivo
+    /// sin depender de una interfaz grafica que todavia no existe.
+    void SetTitle(const char* title);
+
     /// Si la ventana tiene el foco del sistema. Cuando lo pierde, GLFW deja de
     /// enviar eventos de teclado y las teclas pulsadas quedan congeladas.
     [[nodiscard]] bool IsFocused() const;

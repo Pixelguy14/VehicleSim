@@ -5,12 +5,11 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "math/Angles.h"
 #include "math/Vec2.h"
 
 namespace vs {
 namespace {
-
-constexpr float kTwoPi = 6.28318530718F;
 
 // Adaptacion de la grilla: se duplica el paso hasta que las lineas queden al
 // menos a esta distancia en pantalla. Por debajo, la grilla se vuelve una

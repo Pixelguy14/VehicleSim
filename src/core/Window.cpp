@@ -113,6 +113,10 @@ void Window::RequestClose() {
     glfwSetWindowShouldClose(handle_, GLFW_TRUE);
 }
 
+void Window::SetTitle(const char* title) {
+    glfwSetWindowTitle(handle_, title);
+}
+
 bool Window::IsFocused() const {
     return glfwGetWindowAttrib(handle_, GLFW_FOCUSED) == GLFW_TRUE;
 }
