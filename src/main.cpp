@@ -5,16 +5,21 @@
 
 #include <cstdio>
 #include <cstring>
+#include <exception>
 
+#include <glad/gl.h>  // siempre antes que GLFW
 #include <box2d/box2d.h>
 #include <GLFW/glfw3.h>
 
 #include "core/Version.h"
+#include "core/Window.h"
 
 namespace {
 
 constexpr const char* kUsage =
     "Uso: vehicle_sim [opciones]\n"
+    "\n"
+    "Sin argumentos abre la ventana.\n"
     "\n"
     "Opciones:\n"
     "  --version   muestra la version y termina\n"
@@ -30,8 +35,11 @@ void PrintBanner() {
     std::printf("Simulacion 2D de trafico urbano\n");
     std::printf("Compilado con %s %s, configuracion %s\n", VS_COMPILER_ID, VS_COMPILER_VERSION,
                 VS_BUILD_CONFIG);
-    std::printf("\nTodavia sin ventana: GLFW llega en el Sprint 0.5.\n");
-    std::printf("Prueba: vehicle_sim --version | --selftest\n");
+    std::printf("\n");
+    // Sin esto, al redirigir la salida a un archivo el banner (stdout, con
+    // buffer) aparece despues de los errores (stderr, sin buffer), y el log se
+    // lee en un orden que no ocurrio.
+    std::fflush(stdout);
 }
 
 // Deja caer un circulo sobre un suelo estatico y comprueba que queda encima.
@@ -87,6 +95,34 @@ int RunSelfTest() {
     return ok ? 0 : 1;
 }
 
+// Bucle principal por ahora vacio: abre la ventana, limpia el fondo y cierra
+// con Escape. El game loop con paso fijo y el renderer llegan en 0.6 y 0.7.
+int RunWindow() {
+    vs::Window window;
+
+    std::printf("Ventana %dx%d abierta. Escape para salir.\n", window.FramebufferWidth(),
+                window.FramebufferHeight());
+
+    while (!window.ShouldClose()) {
+        window.PollEvents();
+
+        // Temporal: en el Sprint 0.5b esto se mueve al InputManager. Consultar
+        // teclas fisicas desde el bucle principal es justo el problema que esa
+        // abstraccion resuelve: con varias camaras y modos de depuracion esto
+        // se vuelve inmanejable.
+        if (glfwGetKey(window.Handle(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            window.RequestClose();
+        }
+
+        glClearColor(0.09F, 0.10F, 0.12F, 1.0F);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        window.SwapBuffers();
+    }
+
+    return 0;
+}
+
 // Devuelve el codigo de salida del proceso. 0 exito, 2 uso incorrecto: la
 // convencion que siguen casi todas las herramientas de linea de comandos.
 int Run(int argc, char** argv) {
@@ -108,11 +144,16 @@ int Run(int argc, char** argv) {
     }
 
     PrintBanner();
-    return 0;
+    return RunWindow();
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
-    return Run(argc, argv);
+    try {
+        return Run(argc, argv);
+    } catch (const std::exception& error) {
+        std::fprintf(stderr, "Error: %s\n", error.what());
+        return 1;
+    }
 }

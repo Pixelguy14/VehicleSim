@@ -11,6 +11,7 @@ configure_file(
 
 add_executable(vehicle_sim
     main.cpp
+    core/Window.cpp
 )
 
 target_include_directories(vehicle_sim
