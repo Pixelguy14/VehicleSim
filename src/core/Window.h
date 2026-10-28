@@ -40,6 +40,10 @@ public:
     [[nodiscard]] bool ShouldClose() const;
     void RequestClose();
 
+    /// Si la ventana tiene el foco del sistema. Cuando lo pierde, GLFW deja de
+    /// enviar eventos de teclado y las teclas pulsadas quedan congeladas.
+    [[nodiscard]] bool IsFocused() const;
+
     /// Tamano del framebuffer en pixeles, no en unidades de pantalla. En
     /// pantallas HiDPI no coinciden, y es este el que espera glViewport.
     [[nodiscard]] int FramebufferWidth() const { return width_; }
@@ -54,5 +58,9 @@ private:
     int width_ = 0;
     int height_ = 0;
 };
+
+/// Version de GLFW en tiempo de ejecucion. Existe para que el resto del codigo
+/// pueda informar de ella sin incluir cabeceras de GLFW.
+[[nodiscard]] const char* GlfwVersion();
 
 }  // namespace vs

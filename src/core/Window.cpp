@@ -113,6 +113,14 @@ void Window::RequestClose() {
     glfwSetWindowShouldClose(handle_, GLFW_TRUE);
 }
 
+bool Window::IsFocused() const {
+    return glfwGetWindowAttrib(handle_, GLFW_FOCUSED) == GLFW_TRUE;
+}
+
+const char* GlfwVersion() {
+    return glfwGetVersionString();
+}
+
 void Window::OnFramebufferResize(GLFWwindow* window, int width, int height) {
     auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
     if (self == nullptr) {

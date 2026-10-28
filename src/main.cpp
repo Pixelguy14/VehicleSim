@@ -1,18 +1,16 @@
-// GLFW no debe incluir ninguna cabecera de OpenGL por su cuenta: el cargador
-// (glad) tiene que ir primero y decidir que se incluye. Si no se define esto,
-// GLFW incluye <GL/gl.h> y aparecen errores de simbolos duplicados.
-#define GLFW_INCLUDE_NONE
-
+// main.cpp ya no conoce GLFW: la ventana y la entrada estan encapsuladas en
+// core/Window y input/InputManager. Solo necesita glad para las llamadas de
+// OpenGL y Box2D para la prueba de humo.
 #include <cstdio>
 #include <cstring>
 #include <exception>
 
-#include <glad/gl.h>  // siempre antes que GLFW
 #include <box2d/box2d.h>
-#include <GLFW/glfw3.h>
+#include <glad/gl.h>
 
 #include "core/Version.h"
 #include "core/Window.h"
+#include "input/InputManager.h"
 
 namespace {
 
@@ -48,7 +46,7 @@ void PrintBanner() {
 // Box2D simula de verdad, no solo compila.
 int RunSelfTest() {
     std::printf("--- dependencias ---\n");
-    std::printf("GLFW     %s\n", glfwGetVersionString());
+    std::printf("GLFW     %s\n", vs::GlfwVersion());
 
     const b2Version box2d = b2GetVersion();
     std::printf("Box2D    %d.%d.%d\n", box2d.major, box2d.minor, box2d.revision);
@@ -99,19 +97,51 @@ int RunSelfTest() {
 // con Escape. El game loop con paso fijo y el renderer llegan en 0.6 y 0.7.
 int RunWindow() {
     vs::Window window;
+    vs::InputManager input(window);
 
-    std::printf("Ventana %dx%d abierta. Escape para salir.\n", window.FramebufferWidth(),
+    bool debug = false;
+
+    std::printf("Ventana %dx%d abierta. El renderer llega en 0.7.\n", window.FramebufferWidth(),
                 window.FramebufferHeight());
+    std::printf("Controles: W/S o flechas, espacio freno de mano, F1 depuracion, R reset,\n");
+    std::printf("Escape salir.\n");
+    std::fflush(stdout);
 
     while (!window.ShouldClose()) {
         window.PollEvents();
 
-        // Temporal: en el Sprint 0.5b esto se mueve al InputManager. Consultar
-        // teclas fisicas desde el bucle principal es justo el problema que esa
-        // abstraccion resuelve: con varias camaras y modos de depuracion esto
-        // se vuelve inmanejable.
-        if (glfwGetKey(window.Handle(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        // Una sola lectura de hardware por frame. En 0.6 este BeginStep se
+        // llamara una vez por cada paso fijo que toque ejecutar, no una vez por
+        // frame: ese es justo el cambio que InputState hace posible.
+        input.Poll();
+        input.BeginStep();
+
+        if (input.WasPressed(vs::InputAction::Quit)) {
             window.RequestClose();
+        }
+
+        if (input.WasPressed(vs::InputAction::ToggleDebug)) {
+            debug = !debug;
+            std::printf("depuracion %s | giro %+.2f acelerador %.2f freno %.2f\n",
+                        debug ? "ON" : "OFF", static_cast<double>(input.SteerAxis()),
+                        static_cast<double>(input.ThrottleAxis()),
+                        static_cast<double>(input.BrakeAxis()));
+            std::fflush(stdout);
+        }
+
+        // Estos mensajes existen solo para demostrar que los flancos llegan una
+        // vez por pulsacion y no una vez por frame. Desaparecen en 0.6.
+        if (input.WasPressed(vs::InputAction::Throttle)) {
+            std::printf("acelerador presionado\n");
+            std::fflush(stdout);
+        }
+        if (input.WasReleased(vs::InputAction::Throttle)) {
+            std::printf("acelerador soltado\n");
+            std::fflush(stdout);
+        }
+        if (input.WasPressed(vs::InputAction::Reset)) {
+            std::printf("reset\n");
+            std::fflush(stdout);
         }
 
         glClearColor(0.09F, 0.10F, 0.12F, 1.0F);
