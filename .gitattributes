@@ -1,0 +1,16 @@
+# Normalize to LF in the repository, LF in the working tree on every OS.
+* text=auto eol=lf
+
+# Binary assets: never touch line endings.
+*.png binary
+*.jpg binary
+*.ico binary
+*.ttf binary
+*.wav binary
+*.ogg binary
+*.zip binary
+*.AppImage binary
+*.dll binary
+*.exe binary
+*.pdb binary
+*.dmg binary

@@ -1,0 +1,58 @@
+docs/
+
+# --- Build output ---
+build/
+build-*/
+out/
+install/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+CMakeUserPresets.json
+compile_commands.json
+*.ninja
+.ninja_deps
+.ninja_log
+
+# --- Compiled objects and binaries ---
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.exp
+*.app
+
+# --- Caches ---
+.cache/
+.ccache/
+*.gch
+*.pch
+
+# --- IDE and editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.clangd/
+
+# --- Operating system ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Packaging artifacts ---
+*.deb
+*.rpm
+*.AppImage
+*.dmg
+*.msi
+*.zip
+*.tar.gz
