@@ -48,7 +48,7 @@ habrá tres presets:
 
 ```bash
 cmake --preset dev-debug
-cmake --build --preset dev-debug
+cmake --build --preset dev-debugs
 ```
 
 ## Estructura del repositorio

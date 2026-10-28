@@ -1,6 +1,8 @@
 // main.cpp ya no conoce GLFW: la ventana y la entrada estan encapsuladas en
 // core/Window y input/InputManager. Solo necesita glad para las llamadas de
 // OpenGL y Box2D para la prueba de humo.
+#include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <exception>
@@ -10,7 +12,9 @@
 
 #include "core/Version.h"
 #include "core/Window.h"
+#include "graphics/Renderer.h"
 #include "input/InputManager.h"
+#include "math/Camera2D.h"
 
 namespace {
 
@@ -93,26 +97,41 @@ int RunSelfTest() {
     return ok ? 0 : 1;
 }
 
-// Bucle principal por ahora vacio: abre la ventana, limpia el fondo y cierra
-// con Escape. El game loop con paso fijo y el renderer llegan en 0.6 y 0.7.
+// Bucle principal. Todavia no hay simulacion: el objetivo de este paso es ver
+// geometria y comprobar que la camara, la grilla y el resize responden. El
+// game loop con paso fijo llega en 0.6 y el vehiculo en el Sprint 2.
 int RunWindow() {
     vs::Window window;
     vs::InputManager input(window);
 
-    bool debug = false;
+    vs::Camera2D camera;
+    camera.SetViewport(window.FramebufferWidth(), window.FramebufferHeight());
+    camera.SetZoom(60.0F);
 
-    std::printf("Ventana %dx%d abierta. El renderer llega en 0.7.\n", window.FramebufferWidth(),
-                window.FramebufferHeight());
-    std::printf("Controles: W/S o flechas, espacio freno de mano, F1 depuracion, R reset,\n");
+    vs::Renderer renderer;
+
+    bool showGrid = true;
+
+    const auto startTime = std::chrono::steady_clock::now();
+    auto lastFrame = startTime;
+
+    std::printf("Ventana %dx%d abierta. Grilla de 1 m, ejes X rojo e Y verde.\n",
+                window.FramebufferWidth(), window.FramebufferHeight());
+    std::printf("Controles: W/S y A/D mueven la camara (temporal, hasta que exista el\n");
+    std::printf("vehiculo), espacio acelera el desplazamiento, F1 oculta la grilla,\n");
     std::printf("Escape salir.\n");
     std::fflush(stdout);
 
     while (!window.ShouldClose()) {
-        window.PollEvents();
+        const auto now = std::chrono::steady_clock::now();
+        const float elapsed = std::chrono::duration<float>(now - startTime).count();
+        // Un frame largo (arrastrar la ventana, cambiar de escritorio) no debe
+        // teletransportar la camara: se acota el delta a 100 ms.
+        const float deltaSeconds = std::clamp(
+            std::chrono::duration<float>(now - lastFrame).count(), 0.0F, 0.1F);
+        lastFrame = now;
 
-        // Una sola lectura de hardware por frame. En 0.6 este BeginStep se
-        // llamara una vez por cada paso fijo que toque ejecutar, no una vez por
-        // frame: ese es justo el cambio que InputState hace posible.
+        window.PollEvents();
         input.Poll();
         input.BeginStep();
 
@@ -121,31 +140,47 @@ int RunWindow() {
         }
 
         if (input.WasPressed(vs::InputAction::ToggleDebug)) {
-            debug = !debug;
-            std::printf("depuracion %s | giro %+.2f acelerador %.2f freno %.2f\n",
-                        debug ? "ON" : "OFF", static_cast<double>(input.SteerAxis()),
-                        static_cast<double>(input.ThrottleAxis()),
-                        static_cast<double>(input.BrakeAxis()));
+            showGrid = !showGrid;
+            std::printf("grilla %s\n", showGrid ? "ON" : "OFF");
             std::fflush(stdout);
         }
 
-        // Estos mensajes existen solo para demostrar que los flancos llegan una
-        // vez por pulsacion y no una vez por frame. Desaparecen en 0.6.
-        if (input.WasPressed(vs::InputAction::Throttle)) {
-            std::printf("acelerador presionado\n");
-            std::fflush(stdout);
-        }
-        if (input.WasReleased(vs::InputAction::Throttle)) {
-            std::printf("acelerador soltado\n");
-            std::fflush(stdout);
-        }
-        if (input.WasPressed(vs::InputAction::Reset)) {
-            std::printf("reset\n");
-            std::fflush(stdout);
+        // Camara de depuracion. Es temporal: estos mismos ejes moveran el coche
+        // en el Sprint 2. Existe ahora para demostrar que la entrada, la camara
+        // y la proyeccion estan de verdad conectadas de punta a punta.
+        {
+            float speed = 8.0F;
+            if (input.IsDown(vs::InputAction::Handbrake)) {
+                speed *= 3.0F;
+            }
+            const float distance = speed * deltaSeconds;
+            camera.Move({input.SteerAxis() * distance,
+                         (input.ThrottleAxis() - input.BrakeAxis()) * distance});
         }
 
-        glClearColor(0.09F, 0.10F, 0.12F, 1.0F);
+        // La ventana puede cambiar de tamano entre frames; el viewport y la
+        // proyeccion tienen que seguirla o la imagen se estira.
+        camera.SetViewport(window.FramebufferWidth(), window.FramebufferHeight());
+        glViewport(0, 0, window.FramebufferWidth(), window.FramebufferHeight());
+        glClearColor(vs::colors::kBackground.r, vs::colors::kBackground.g,
+                     vs::colors::kBackground.b, vs::colors::kBackground.a);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        renderer.Begin(camera);
+
+        if (showGrid) {
+            renderer.DrawGrid(camera);
+            renderer.DrawAxes(camera);
+        }
+
+        // Tres formas que giran a distinta velocidad: si se mueven suaves y no
+        // parpadean, el camino de datos hasta la GPU esta completo.
+        renderer.DrawRect({0.0F, 0.0F}, {0.7F, 0.7F}, elapsed * 0.9F, vs::colors::kAccent);
+        renderer.DrawCircle({3.0F, 0.0F}, 0.8F, vs::colors::kSecondary, 48);
+        renderer.DrawRect({-3.0F, 1.5F}, {1.2F, 0.35F}, -elapsed * 0.6F,
+                          vs::Color{0.85F, 0.35F, 0.55F, 1.0F});
+
+        renderer.End();
 
         window.SwapBuffers();
     }

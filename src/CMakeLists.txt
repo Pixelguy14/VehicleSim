@@ -12,8 +12,11 @@ configure_file(
 add_executable(vehicle_sim
     main.cpp
     core/Window.cpp
+    graphics/Renderer.cpp
+    graphics/Shader.cpp
     input/InputManager.cpp
     input/InputState.cpp
+    math/Camera2D.cpp
 )
 
 target_include_directories(vehicle_sim
