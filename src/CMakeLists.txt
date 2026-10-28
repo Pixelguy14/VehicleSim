@@ -9,21 +9,41 @@ configure_file(
     @ONLY
 )
 
-add_executable(vehicle_sim
-    main.cpp
+# --- Nucleo: logica sin OpenGL, GLFW ni ventana ------------------------------
+#
+# Separado en su propia biblioteca por una razon concreta: los tests enlazan
+# contra esto y corren sin display, sin driver de GPU y sin ventana. Un test que
+# necesita abrir una ventana no se puede ejecutar en un CI headless, y uno que
+# necesita una GPU no se puede ejecutar en el portatil de otro.
+#
+# La regla para decidir donde va un archivo nuevo: si incluye <glad/gl.h> o
+# <GLFW/glfw3.h>, va al ejecutable; si no, va aqui.
+add_library(vs_core STATIC
     core/FixedStepper.cpp
     core/FrameStats.cpp
-    core/Window.cpp
-    graphics/Renderer.cpp
-    graphics/Shader.cpp
-    input/InputManager.cpp
     input/InputState.cpp
     math/Camera2D.cpp
 )
 
+target_include_directories(vs_core
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+vs_apply_warnings(vs_core)
+vs_apply_project_options(vs_core)
+
+# --- Ejecutable --------------------------------------------------------------
+add_executable(vehicle_sim
+    main.cpp
+    core/Window.cpp
+    graphics/Renderer.cpp
+    graphics/Shader.cpp
+    input/InputManager.cpp
+)
+
 target_include_directories(vehicle_sim
     PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}"
         "${VS_GENERATED_DIR}"
 )
 
@@ -39,6 +59,7 @@ target_compile_definitions(vehicle_sim
 
 target_link_libraries(vehicle_sim
     PRIVATE
+        vs_core
         glad::glad
         glfw
         box2d::box2d

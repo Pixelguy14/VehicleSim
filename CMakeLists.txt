@@ -40,3 +40,12 @@ include(CompilerWarnings)
 include(Dependencies)
 
 add_subdirectory(src)
+
+# --- Tests -------------------------------------------------------------------
+# include(CTest) define BUILD_TESTING (ON por defecto) y habilita `ctest`. Al
+# empaquetar se puede pasar -DBUILD_TESTING=OFF para no compilarlos, pero en
+# desarrollo y en integracion continua queremos que esten siempre.
+include(CTest)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
