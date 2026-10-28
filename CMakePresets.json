@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "dev-debug",
+      "displayName": "Desarrollo (Debug)",
+      "description": "Build con simbolos, sin optimizar y con warnings como errores.",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "VS_WARNINGS_AS_ERRORS": "ON",
+        "VS_STATIC_RUNTIME": "ON"
+      }
+    },
+    {
+      "name": "dev-release",
+      "displayName": "Desarrollo (RelWithDebInfo)",
+      "description": "Optimizado pero con simbolos para perfilar.",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "VS_WARNINGS_AS_ERRORS": "ON",
+        "VS_STATIC_RUNTIME": "ON"
+      }
+    },
+    {
+      "name": "ci",
+      "displayName": "Integracion continua",
+      "description": "Release limpio, warnings como errores, sin artefactos de desarrollo.",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VS_WARNINGS_AS_ERRORS": "ON",
+        "VS_STATIC_RUNTIME": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev-debug",
+      "configurePreset": "dev-debug"
+    },
+    {
+      "name": "dev-release",
+      "configurePreset": "dev-release"
+    },
+    {
+      "name": "ci",
+      "configurePreset": "ci"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+cmake_minimum_required(VERSION 3.28)
+
+project(
+    vehicle_sim
+    VERSION 0.1.0
+    DESCRIPTION "Simulacion 2D de trafico urbano con fisica de vehiculos e IA de enjambre"
+    LANGUAGES CXX
+)
+
+include(GNUInstallDirs)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(CompilerOptions)
+include(CompilerWarnings)
+
+# --- Opciones del proyecto ---------------------------------------------------
+option(VS_WARNINGS_AS_ERRORS "Trata los warnings del compilador como errores" OFF)
+option(VS_STATIC_RUNTIME "Enlaza el runtime de MSVC estaticamente (/MT)" ON)
+
+# --- Configuracion global ----------------------------------------------------
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Si alguien configura sin preset y sin build type, elegimos uno razonable en
+# lugar de compilar sin optimizar ni comprobar nada.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "Sin CMAKE_BUILD_TYPE: usando RelWithDebInfo")
+    set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Tipo de build" FORCE)
+endif()
+
+add_subdirectory(src)

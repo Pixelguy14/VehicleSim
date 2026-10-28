@@ -1,0 +1,30 @@
+#pragma once
+
+// Archivo generado por CMake desde src/core/Version.h.in. No edites la copia
+// que aparece en el directorio de build: cambia la plantilla y vuelve a
+// configurar el proyecto.
+
+namespace vs {
+
+inline constexpr const char* kProjectName = "@PROJECT_NAME@";
+inline constexpr const char* kProjectVersion = "@PROJECT_VERSION@";
+inline constexpr int kVersionMajor = @PROJECT_VERSION_MAJOR@;
+inline constexpr int kVersionMinor = @PROJECT_VERSION_MINOR@;
+inline constexpr int kVersionPatch = @PROJECT_VERSION_PATCH@;
+
+}  // namespace vs
+
+// Estas tres las define el build desde src/CMakeLists.txt. Los valores por
+// defecto permiten incluir la cabecera en un contexto que no las defina, como
+// un analizador estatico o un fragmento de codigo aislado.
+#if !defined(VS_COMPILER_ID)
+#define VS_COMPILER_ID "desconocido"
+#endif
+
+#if !defined(VS_COMPILER_VERSION)
+#define VS_COMPILER_VERSION "desconocida"
+#endif
+
+#if !defined(VS_BUILD_CONFIG)
+#define VS_BUILD_CONFIG "desconocida"
+#endif
