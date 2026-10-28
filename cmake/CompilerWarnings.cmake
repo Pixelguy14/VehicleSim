@@ -28,6 +28,14 @@ set(VS_CLANG_GCC_WARNINGS
 set(VS_MSVC_WARNINGS
     /W4
     /external:W0
+    # C4820: "N bytes de relleno anadidos tras el miembro". Salta en cualquier
+    # struct con padding y nunca indica un bug: el padding lo decide el ABI, no
+    # el programador. Se silencia para no llenar el build de ruido inutil.
+    /wd4820
+    # C4127: "la expresion condicional es constante". Las macros de asercion de
+    # doctest expanden a un if con una condicion que el compilador puede plegar;
+    # el aviso senala el codigo del test, no un problema real.
+    /wd4127
 )
 
 function(vs_apply_warnings target)

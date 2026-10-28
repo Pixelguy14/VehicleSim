@@ -39,13 +39,16 @@ include(CompilerOptions)
 include(CompilerWarnings)
 include(Dependencies)
 
+# --- Tests -------------------------------------------------------------------
+# include(CTest) define BUILD_TESTING (ON por defecto) y habilita `ctest`. Va
+# antes de add_subdirectory(src) porque src/CMakeLists tambien registra tests
+# (la prueba de humo --selftest) y necesita ver la opcion ya definida.
+include(CTest)
+
 add_subdirectory(src)
 
-# --- Tests -------------------------------------------------------------------
-# include(CTest) define BUILD_TESTING (ON por defecto) y habilita `ctest`. Al
-# empaquetar se puede pasar -DBUILD_TESTING=OFF para no compilarlos, pero en
+# Al empaquetar se puede pasar -DBUILD_TESTING=OFF para no compilarlos, pero en
 # desarrollo y en integracion continua queremos que esten siempre.
-include(CTest)
 if(BUILD_TESTING)
     add_subdirectory(tests)
 endif()

@@ -45,4 +45,13 @@ function(vs_apply_project_options target)
     else()
         target_compile_options(${target} PRIVATE ${VS_CLANG_GCC_OPTIONS})
     endif()
+
+    # macOS declara OpenGL obsoleto desde 10.14: cada llamada a gl*() avisa, y
+    # con -Werror el proyecto no compila en Mac. La definicion silencia ese
+    # aviso concreto, no todos. No hay plan de migrar a Metal en este proyecto
+    # (el objetivo es un juego 2D y GL 3.3 funciona en las tres plataformas),
+    # asi que el aviso no aporta nada util aqui.
+    if(APPLE)
+        target_compile_definitions(${target} PRIVATE GL_SILENCE_DEPRECATION)
+    endif()
 endfunction()

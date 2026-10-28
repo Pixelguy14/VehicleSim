@@ -74,3 +74,27 @@ vs_apply_project_options(vehicle_sim)
 install(TARGETS vehicle_sim
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+# Prueba de humo como test de ctest, para que corra tambien en los tres
+# runners de integracion continua. --selftest no abre ventana ni inicializa
+# GLFW (solo pide su version y simula un circulo cayendo con Box2D), asi que
+# funciona en un contenedor sin servidor grafico.
+if(BUILD_TESTING)
+    add_test(NAME vs_selftest COMMAND vehicle_sim --selftest)
+    set_tests_properties(vs_selftest PROPERTIES TIMEOUT 60)
+endif()
+
+# Atajo de desarrollo: compila y lanza el juego en un solo paso.
+#
+#     cmake --build --preset dev-debug --target run
+#
+# La ruta del ejecutable cambia segun el generador y la configuracion
+# (build/dev-debug/src/vehicle_sim, build/dev-release/src/vehicle_sim, o
+# build/ci/src/Debug/vehicle_sim.exe en Visual Studio), asi que se usa
+# $<TARGET_FILE:...> en lugar de escribirla a mano. USES_TERMINAL hace que ninja
+# deje pasar la salida del juego a la terminal en vez de tragarsela.
+add_custom_target(run
+    COMMAND $<TARGET_FILE:vehicle_sim>
+    DEPENDS vehicle_sim
+    USES_TERMINAL
+)

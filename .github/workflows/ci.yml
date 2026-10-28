@@ -1,0 +1,95 @@
+# Integracion continua: compilar y probar en los tres sistemas de escritorio.
+#
+# El objetivo de este workflow no es solo "que compile en Linux". Los tres
+# objetivos tienen problemas distintos y silenciosos:
+#
+#   - Linux necesita cabeceras de X11 y Wayland para compilar GLFW. Sin ellas
+#     el build falla con un error de CMake que no dice nada del proyecto.
+#   - macOS marca OpenGL como obsoleto desde 10.14; con -Werror eso es un fallo
+#     de compilacion en cada llamada a gl*(). Se silencia con GL_SILENCE_DEPRECATION.
+#   - Windows usa MSVC, que nunca se ha probado en este repositorio. /W4 + /WX
+#     sobre codigo nuevo siempre encuentra algo.
+#
+# Los tests enlazan contra vs_core, que no toca OpenGL ni GLFW: por eso corren
+# en los runners sin ventana ni servidor grafico. No hace falta Xvfb.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Un push nuevo cancela la ejecucion anterior de la misma rama: no tiene sentido
+# gastar minutos de runner en un commit que ya esta obsoleto.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Que un fallo en Windows no cancele Linux y macOS: se quieren los tres
+      # resultados en la misma ejecucion, no el primero que llegue.
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            name: Linux x64
+          - os: macos-14
+            name: macOS arm64
+          - os: windows-2022
+            name: Windows x64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependencias del sistema (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            ninja-build \
+            xorg-dev \
+            libwayland-dev \
+            libxkbcommon-dev \
+            wayland-protocols \
+            extra-cmake-modules
+
+      # MSVC no esta en el PATH de los runners: hay que cargar el entorno de
+      # Visual Studio para que Ninja encuentre cl.exe y el SDK de Windows.
+      - name: Entorno de MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: which ninja || brew install ninja
+
+      # Si algo falla en un runner, estos numeros son lo primero que se mira:
+      # "funcionaba con CMake 4.4" no sirve si el runner trae 3.28.
+      - name: Versiones
+        run: |
+          cmake --version
+          ninja --version
+
+      # El preset ci es Release, con warnings como errores. Se configura y se
+      # compila con el mismo preset que usa cualquiera en local, para que un
+      # verde en CI signifique algo.
+      - name: Configurar
+        run: cmake --preset ci
+
+      - name: Compilar
+        run: cmake --build --preset ci
+
+      # Incluye vs_tests (doctest, headless) y vs_selftest (arranca Box2D y
+      # comprueba que el circulo cae sobre el suelo).
+      - name: Tests
+        run: ctest --preset ci

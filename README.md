@@ -43,12 +43,24 @@ Un clon top-down de conducción estilo GTA 1, enfocado en tres cosas:
 
 ## Compilación
 
-Pendiente de documentar en el Sprint 0.3. Cuando exista el sistema de build
-habrá tres presets:
-
 ```bash
 cmake --preset dev-debug
-cmake --build --preset dev-debugs
+cmake --build --preset dev-debug
+```
+
+Presets disponibles: `dev-debug` (símbolos, sin optimizar), `dev-release`
+(optimizado con símbolos) y `ci` (release limpio con warnings como errores).
+
+Para compilar y lanzar de una vez:
+
+```bash
+cmake --build --preset dev-debug --target run
+```
+
+## Ejecución
+
+```bash
+./build/dev-debug/src/vehicle_sim
 ```
 
 ## Estructura del repositorio
