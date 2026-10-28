@@ -29,6 +29,13 @@ target_compile_definitions(vehicle_sim
         VS_BUILD_CONFIG="$<CONFIG>"
 )
 
+target_link_libraries(vehicle_sim
+    PRIVATE
+        glad::glad
+        glfw
+        box2d::box2d
+)
+
 vs_apply_warnings(vehicle_sim)
 vs_apply_project_options(vehicle_sim)
 
