@@ -70,6 +70,22 @@ void FixedStepper::SetMaxFrameSeconds(double seconds) {
     }
 }
 
+void FixedStepper::SetFixedDelta(double seconds) {
+    // Misma validacion que el constructor: un paso cero colgaria Advance.
+    if (!(seconds > 0.0) || !std::isfinite(seconds)) {
+        return;
+    }
+
+    fixedDelta_ = seconds;
+
+    // El acumulador se midio con el paso anterior. Si el paso nuevo es mas
+    // pequeno, lo pendiente podria disparar varios pasos de golpe al cambiar
+    // desde el panel; se conserva como mucho lo que cabe en un paso.
+    if (accumulator_ >= fixedDelta_) {
+        accumulator_ = std::fmod(accumulator_, fixedDelta_);
+    }
+}
+
 void FixedStepper::SetMaxStepsPerFrame(int steps) {
     maxStepsPerFrame_ = std::max(steps, 1);
 }

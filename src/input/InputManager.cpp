@@ -19,7 +19,7 @@ struct KeyBinding {
 };
 
 // Una accion puede tener varias teclas: WASD y flechas conviven.
-constexpr std::array<KeyBinding, 12> kKeyBindings{{
+constexpr std::array<KeyBinding, 13> kKeyBindings{{
     {InputAction::Throttle, GLFW_KEY_W},
     {InputAction::Throttle, GLFW_KEY_UP},
     {InputAction::Brake, GLFW_KEY_S},
@@ -30,6 +30,7 @@ constexpr std::array<KeyBinding, 12> kKeyBindings{{
     {InputAction::SteerRight, GLFW_KEY_RIGHT},
     {InputAction::Handbrake, GLFW_KEY_SPACE},
     {InputAction::ToggleDebug, GLFW_KEY_F1},
+    {InputAction::TogglePause, GLFW_KEY_F2},
     {InputAction::Reset, GLFW_KEY_R},
     {InputAction::Quit, GLFW_KEY_ESCAPE},
 }};
@@ -39,9 +40,10 @@ struct ButtonBinding {
     int button;
 };
 
-constexpr std::array<ButtonBinding, 4> kButtonBindings{{
+constexpr std::array<ButtonBinding, 5> kButtonBindings{{
     {InputAction::Handbrake, GLFW_GAMEPAD_BUTTON_A},
     {InputAction::ToggleDebug, GLFW_GAMEPAD_BUTTON_X},
+    {InputAction::TogglePause, GLFW_GAMEPAD_BUTTON_Y},
     {InputAction::Reset, GLFW_GAMEPAD_BUTTON_B},
     {InputAction::Quit, GLFW_GAMEPAD_BUTTON_START},
 }};

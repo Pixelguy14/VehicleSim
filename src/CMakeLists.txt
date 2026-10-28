@@ -37,6 +37,8 @@ vs_apply_project_options(vs_core)
 add_executable(vehicle_sim
     main.cpp
     core/Window.cpp
+    graphics/DebugOverlay.cpp
+    graphics/DebugPanel.cpp
     graphics/Renderer.cpp
     graphics/Shader.cpp
     input/InputManager.cpp
@@ -60,6 +62,7 @@ target_compile_definitions(vehicle_sim
 target_link_libraries(vehicle_sim
     PRIVATE
         vs_core
+        vs_imgui
         glad::glad
         glfw
         box2d::box2d

@@ -14,6 +14,8 @@
 #include "core/FrameStats.h"
 #include "core/Version.h"
 #include "core/Window.h"
+#include "graphics/DebugOverlay.h"
+#include "graphics/DebugPanel.h"
 #include "graphics/Renderer.h"
 #include "input/InputManager.h"
 #include "math/Angles.h"
@@ -149,21 +151,26 @@ int RunWindow() {
     camera.SetZoom(60.0F);
 
     vs::Renderer renderer;
+    vs::DebugOverlay overlay(window);
+    vs::DebugPanel panel;
+
     vs::FixedStepper stepper;  // 1/60 s
     vs::FrameStats stats;
+    vs::FrameSnapshot latestStats;
 
     SceneState current;
     SceneState previous;
 
     bool showGrid = true;
+    bool showOverlay = true;
+    bool paused = false;
 
     auto lastFrame = std::chrono::steady_clock::now();
 
-    std::printf("Ventana %dx%d abierta. Paso fijo 60 Hz, titulo con FPS y coste de fisica.\n",
+    std::printf("Ventana %dx%d abierta. F1 panel de depuracion, F2 pausa.\n",
                 window.FramebufferWidth(), window.FramebufferHeight());
     std::printf("Controles: W/S y A/D mueven la camara (temporal, hasta que exista el\n");
-    std::printf("vehiculo), espacio acelera el desplazamiento, F1 oculta la grilla,\n");
-    std::printf("Escape salir.\n");
+    std::printf("vehiculo), espacio acelera el desplazamiento, Escape salir.\n");
     std::fflush(stdout);
 
     while (!window.ShouldClose()) {
@@ -172,6 +179,13 @@ int RunWindow() {
         lastFrame = frameStart;
 
         window.PollEvents();
+        overlay.BeginFrame();
+
+        // Si un widget de la interfaz tiene el teclado, el juego no lo ve. Es el
+        // gancho que InputManager expone desde 0.5b, y sin el, arrastrar un
+        // slider de la camara la moveria dos veces: una por el raton y otra por
+        // las teclas que hubiera pulsadas.
+        input.SetUiCapture(overlay.WantsKeyboard());
         input.Poll();
 
         // Tras una pausa larga (minimizar, cambiar de escritorio, un breakpoint)
@@ -182,28 +196,63 @@ int RunWindow() {
             stepper.Reset();
         }
 
-        const int stepCount = stalled ? 0 : stepper.Advance(frameSeconds);
+        const int stepCount = (paused || stalled) ? 0 : stepper.Advance(frameSeconds);
         const float fixedDelta = static_cast<float>(stepper.FixedDelta());
 
-        const auto physicsStart = std::chrono::steady_clock::now();
-        for (int step = 0; step < stepCount; ++step) {
-            input.BeginStep();
-
+        // Los atajos se comprueban dentro del paso para que el flanco lo consuma
+        // el mismo BeginStep que lo publica. Cuando no corre ningun paso (pausa
+        // o atasco) hay que consumir uno igualmente: si no, pausar congelaria
+        // tambien la tecla que despausa.
+        auto handleShortcuts = [&window, &input, &showOverlay, &paused]() {
             if (input.WasPressed(vs::InputAction::Quit)) {
                 window.RequestClose();
             }
-
             if (input.WasPressed(vs::InputAction::ToggleDebug)) {
-                showGrid = !showGrid;
-                std::printf("grilla %s\n", showGrid ? "ON" : "OFF");
-                std::fflush(stdout);
+                showOverlay = !showOverlay;
             }
+            if (input.WasPressed(vs::InputAction::TogglePause)) {
+                paused = !paused;
+            }
+        };
 
-            previous = current;
-            StepScene(current, input, fixedDelta);
+        const auto physicsStart = std::chrono::steady_clock::now();
+        if (stepCount == 0) {
+            input.BeginStep();
+            handleShortcuts();
+        } else {
+            for (int step = 0; step < stepCount; ++step) {
+                input.BeginStep();
+                handleShortcuts();
+
+                previous = current;
+                StepScene(current, input, fixedDelta);
+            }
         }
         const double physicsSeconds =
             std::chrono::duration<double>(std::chrono::steady_clock::now() - physicsStart).count();
+
+        panel.PushFrameTime(static_cast<float>(frameSeconds * 1000.0));
+
+        // El panel se dibuja antes que el mundo para que un cambio de camara
+        // hecho en el propio panel se vea en este mismo frame.
+        if (showOverlay) {
+            const vs::Vec2 cameraBefore = current.cameraPosition;
+
+            vs::DebugPanelContext panelContext;
+            panelContext.snapshot = &latestStats;
+            panelContext.stepper = &stepper;
+            panelContext.camera = &camera;
+            panelContext.cameraPosition = &current.cameraPosition;
+            panelContext.showGrid = &showGrid;
+            panelContext.paused = &paused;
+            panel.Draw(panelContext);
+
+            if (!(current.cameraPosition == cameraBefore)) {
+                // Arrastrar la camara desde el panel no es simulacion: no hay
+                // que interpolar hacia una posicion en la que ya esta.
+                previous.cameraPosition = current.cameraPosition;
+            }
+        }
 
         // Si este frame no ejecuto ningun paso, `previous` y `current` siguen
         // iguales y alpha crece: la imagen sigue avanzando hacia el estado ya
@@ -241,22 +290,25 @@ int RunWindow() {
 
         renderer.End();
 
+        // La interfaz se dibuja encima del mundo, en el mismo framebuffer y sin
+        // limpiar: por eso va despues de renderer.End().
+        overlay.Render();
+
         window.SwapBuffers();
 
         stats.AddFrame(frameSeconds, physicsSeconds, stepCount);
 
-        vs::FrameSnapshot snapshot;
-        if (stats.TakeSnapshot(snapshot)) {
+        if (stats.TakeSnapshot(latestStats)) {
             char title[160];
             std::snprintf(title, sizeof(title),
                           "VehicleSim | %.1f fps | %.2f ms/frame | fisica %.3f ms | %.1f pasos",
-                          snapshot.fps, snapshot.frameMs, snapshot.physicsMs,
-                          snapshot.stepsPerFrame);
+                          latestStats.fps, latestStats.frameMs, latestStats.physicsMs,
+                          latestStats.stepsPerFrame);
             window.SetTitle(title);
 
             std::printf("%.1f fps | frame %.2f ms | fisica %.3f ms | %.2f pasos/frame\n",
-                        snapshot.fps, snapshot.frameMs, snapshot.physicsMs,
-                        snapshot.stepsPerFrame);
+                        latestStats.fps, latestStats.frameMs, latestStats.physicsMs,
+                        latestStats.stepsPerFrame);
             std::fflush(stdout);
         }
     }

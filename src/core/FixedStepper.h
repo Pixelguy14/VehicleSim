@@ -39,6 +39,10 @@ public:
 
     [[nodiscard]] double FixedDelta() const { return fixedDelta_; }
 
+    /// Cambia la duracion del paso. Se usa desde el panel de depuracion para
+    /// comparar el coste de la fisica a 30, 60 o 120 Hz sin recompilar.
+    void SetFixedDelta(double seconds);
+
     /// Tiempo acumulado sin consumir, en segundos.
     [[nodiscard]] double AccumulatorSeconds() const { return accumulator_; }
 
@@ -49,6 +53,7 @@ public:
 
     void SetMaxFrameSeconds(double seconds);
     void SetMaxStepsPerFrame(int steps);
+    [[nodiscard]] int MaxStepsPerFrame() const { return maxStepsPerFrame_; }
 
     /// Si el ultimo Advance descarto tiempo por ir demasiado retrasado. Es la
     /// senal de que la maquina no llega: si aparece de forma sostenida, hay que

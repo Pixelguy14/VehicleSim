@@ -17,6 +17,7 @@ enum class InputAction : std::uint8_t {
     SteerRight,
     Handbrake,
     ToggleDebug,
+    TogglePause,
     Reset,
     Quit,
 
@@ -46,6 +47,8 @@ inline constexpr std::size_t kInputActionCount = static_cast<std::size_t>(InputA
             return "Handbrake";
         case InputAction::ToggleDebug:
             return "ToggleDebug";
+        case InputAction::TogglePause:
+            return "TogglePause";
         case InputAction::Reset:
             return "Reset";
         case InputAction::Quit:

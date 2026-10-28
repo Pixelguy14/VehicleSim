@@ -103,6 +103,66 @@ TEST_CASE("FixedStepper reparte el tiempo distinto segun el refresco, pero no lo
     CHECK(std::fabs(steps120 - steps144) <= 1.0);
 }
 
+TEST_CASE("SetFixedDelta cambia el ritmo sin tocar el tiempo acumulado") {
+    // Es lo que hace el slider del panel de depuracion: pasar de 60 a 120 Hz en
+    // caliente. Un frame de 1/60 debe rendir dos pasos a 120 Hz y uno a 60.
+    vs::FixedStepper a60;
+    CHECK(a60.Advance(1.0 / 60.0) == 1);
+
+    vs::FixedStepper a120;
+    a120.SetFixedDelta(1.0 / 120.0);
+    CHECK(a120.FixedDelta() == doctest::Approx(1.0 / 120.0));
+    CHECK(a120.Advance(1.0 / 60.0) == 2);
+
+    // Y al reves: un frame de 1/120 a 60 Hz no llega a un paso.
+    vs::FixedStepper slow;
+    slow.Advance(1.0 / 120.0);
+    CHECK(slow.AccumulatorSeconds() == doctest::Approx(1.0 / 120.0));
+}
+
+TEST_CASE("SetFixedDelta no dispara una rafaga al reducir el paso") {
+    // El caso que rompe el panel: se acumula medio paso a 60 Hz y se baja a
+    // 240 Hz. Sin recortar el acumulador, el siguiente frame ejecutaria dos
+    // pasos de golpe y el coche daria un tiron visible.
+    vs::FixedStepper stepper;
+    CHECK(stepper.Advance(1.0 / 120.0) == 0);
+    CHECK(stepper.AccumulatorSeconds() == doctest::Approx(1.0 / 120.0));
+
+    stepper.SetFixedDelta(1.0 / 240.0);
+    CHECK(stepper.AccumulatorSeconds() < stepper.FixedDelta());
+
+    // Un frame de 1/240 tras el cambio rinde exactamente un paso, no tres.
+    CHECK(stepper.Advance(1.0 / 240.0) == 1);
+}
+
+TEST_CASE("SetFixedDelta recalcula Alpha con el paso nuevo") {
+    vs::FixedStepper stepper;
+    stepper.Advance(1.0 / 240.0);  // un cuarto de paso a 60 Hz
+
+    stepper.SetFixedDelta(1.0 / 240.0);
+    // El tiempo pendiente era 1/240, o sea un paso entero del nuevo ritmo; el
+    // recorte lo deja en cero y alpha tiene que reflejarlo.
+    CHECK(stepper.Alpha() == doctest::Approx(0.0).epsilon(1e-9));
+
+    stepper.Advance(1.0 / 480.0);
+    CHECK(stepper.Alpha() == doctest::Approx(0.5).epsilon(1e-3));
+}
+
+TEST_CASE("SetFixedDelta ignora valores que colgarian Advance") {
+    vs::FixedStepper stepper;
+    const double original = stepper.FixedDelta();
+
+    stepper.SetFixedDelta(0.0);
+    stepper.SetFixedDelta(-1.0);
+    stepper.SetFixedDelta(std::nan(""));
+    stepper.SetFixedDelta(std::numeric_limits<double>::infinity());
+
+    CHECK(stepper.FixedDelta() == doctest::Approx(original));
+
+    // Y sigue funcionando: un paso de 1/60 con el valor original.
+    CHECK(stepper.Advance(1.0 / 60.0) == 1);
+}
+
 TEST_CASE("FixedStepper Reset descarta el tiempo pendiente") {
     vs::FixedStepper stepper;
 

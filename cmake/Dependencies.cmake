@@ -59,7 +59,24 @@ FetchContent_Declare(
     EXCLUDE_FROM_ALL
 )
 
-FetchContent_MakeAvailable(glfw box2d doctest)
+# --- Dear ImGui: superposicion de depuracion ---------------------------------
+# Se descarga el repositorio y se compilan a mano solo los archivos que hacen
+# falta. ImGui no trae CMakeLists: su build oficial son proyectos de Visual
+# Studio y Makefiles propios, asi que el target se define aqui.
+#
+# Fijado por etiqueta, como el resto: un cambio en la rama master de ImGui
+# puede reordenar la API de widgets y romper el build sin que nadie haya tocado
+# este repositorio.
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG v1.92.9b
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+    EXCLUDE_FROM_ALL
+)
+
+FetchContent_MakeAvailable(glfw box2d doctest imgui)
 
 add_library(vs_doctest INTERFACE)
 add_library(doctest::doctest ALIAS vs_doctest)
@@ -85,4 +102,36 @@ foreach(vs_dependency glfw box2d glad)
         set_property(TARGET ${vs_dependency} PROPERTY SYSTEM TRUE)
     endif()
 endforeach()
+
+# --- Dear ImGui: se compila aqui, no se usa su build oficial ------------------
+# Solo los cuatro archivos del nucleo y los dos backends que usamos. ImGui trae
+# decenas de ejemplos y backends para Vulkan, DirectX, SDL y demas; compilarlos
+# todos multiplicaria el tiempo de build sin aportar nada.
+add_library(vs_imgui STATIC
+    "${imgui_SOURCE_DIR}/imgui.cpp"
+    "${imgui_SOURCE_DIR}/imgui_draw.cpp"
+    "${imgui_SOURCE_DIR}/imgui_tables.cpp"
+    "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+    "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
+    "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp"
+)
+
+target_include_directories(vs_imgui
+    SYSTEM PUBLIC
+        "${imgui_SOURCE_DIR}"
+        "${imgui_SOURCE_DIR}/backends"
+)
+
+# Aviso sobre el cargador de OpenGL: ImGui 1.92 ya no acepta un cargador
+# externo. Define IMGUI_IMPL_OPENGL_LOADER_CUSTOM para *saltarse* su cargador
+# embebido, pero no incluye ninguna cabecera en su lugar, asi que definirlo sin
+# mas deja el backend sin simbolos GL. Se usa su cargador (gl3w recortado): vive
+# en su propia unidad de traduccion, con simbolos renombrados, y no colisiona
+# con glad.
+target_link_libraries(vs_imgui
+    PUBLIC
+        glfw
+)
+
+set_property(TARGET vs_imgui PROPERTY SYSTEM TRUE)
 
