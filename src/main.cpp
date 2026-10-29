@@ -318,9 +318,15 @@ int RunWindow() {
 
 // Devuelve el codigo de salida del proceso. 0 exito, 2 uso incorrecto: la
 // convencion que siguen casi todas las herramientas de linea de comandos.
+//
+// Solo se interpreta el primer argumento. No hay opciones que se combinen, y
+// recorrer el resto en silencio solo escondia un detalle: con un bucle cuyo
+// cuerpo siempre hace return, el incremento es codigo inalcanzable y MSVC lo
+// avisa con C4702 (que con /WX es un fallo de compilacion).
 int Run(int argc, char** argv) {
-    for (int i = 1; i < argc; ++i) {
-        const char* arg = argv[i];
+    if (argc > 1) {
+        const char* arg = argv[1];
+
         if (std::strcmp(arg, "--version") == 0) {
             PrintVersion();
             return 0;
@@ -332,6 +338,7 @@ int Run(int argc, char** argv) {
             std::printf("%s", kUsage);
             return 0;
         }
+
         std::fprintf(stderr, "Opcion desconocida: %s\n\n%s", arg, kUsage);
         return 2;
     }
